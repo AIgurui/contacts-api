@@ -1,5 +1,5 @@
-const { createClient } = require('@supabase/supabase-js');
-const jwt = require('jsonwebtoken');
+import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
 
 // Initialize Supabase client
 const supabase = createClient(
