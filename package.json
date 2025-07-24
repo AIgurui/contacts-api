@@ -1,10 +1,14 @@
 {
   "name": "contacts-api",
   "version": "1.0.0",
-  "engines": {
-    "node": "18.x"
-  },
+  "description": "Secure API for contacts with JWT authentication",
+  "main": "api/contacts.js",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.3",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build"
   }
 }
