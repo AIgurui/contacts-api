@@ -1,71 +1,43 @@
-const jwt = require('jsonwebtoken');
-const { createClient } = require('@supabase/supabase-js');
-
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
-    // 1. Extract JWT from Authorization header
+    // Extract both JWT and user ID
     const authHeader = req.headers.authorization;
+    const userIdFromHeader = req.headers['x-user-id'];
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: 'Missing or invalid Authorization header',
-        expected: 'Bearer <jwt_token>'
-      });
+      return res.status(401).json({ error: 'Missing or invalid authorization header' });
+    }
+    
+    if (!userIdFromHeader) {
+      return res.status(401).json({ error: 'Missing X-User-ID header' });
     }
 
-    const token = authHeader.split(' ')[1];
-
-    // 2. Validate JWT (you'll need to set JWT_SECRET in Vercel environment variables)
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (jwtError) {
-      return res.status(401).json({
-        error: 'Invalid JWT token',
-        details: jwtError.message
+    const token = authHeader.substring(7); // Remove "Bearer " prefix
+    
+    // Verify JWT
+    const decodedJWT = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // DOUBLE SECURITY: Ensure JWT user matches header user
+    if (decodedJWT.user_id !== userIdFromHeader) {
+      return res.status(401).json({ 
+        error: 'User ID mismatch - security violation detected' 
       });
     }
-
-    // 3. Extract user_id from validated token
-    const userId = decoded.user_id || decoded.id || decoded.sub;
-    if (!userId) {
-      return res.status(400).json({
-        error: 'JWT token missing user_id',
-        decoded: decoded
-      });
-    }
-
-    // 4. Initialize Supabase client
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-
-    // 5. Query contacts filtered by user_id
-    const { data: contacts, error: dbError } = await supabase
+    
+    // Proceed with Supabase query using the validated user ID
+    const { data: contacts, error } = await supabase
       .from('contacts')
       .select('*')
-      .eq('user_id', userId);
-
-    if (dbError) {
-      return res.status(500).json({
-        error: 'Database query failed',
-        details: dbError.message
-      });
+      .eq('user_id', decodedJWT.user_id); // Use JWT user_id
+      
+    if (error) {
+      return res.status(500).json({ error: error.message });
     }
-
-    // 6. Return user's contacts
-    return res.status(200).json({
-      success: true,
-      user_id: userId,
-      contacts: contacts,
-      count: contacts.length,
-      timestamp: new Date().toISOString()
-    });
-
+    
+    return res.status(200).json(contacts);
+    
   } catch (error) {
-    return res.status(500).json({
-      error: 'Function failed',
-      details: error.message
-    });
+    console.error('API Error:', error);
+    return res.status(401).json({ error: 'Invalid token' });
   }
-};
+}
