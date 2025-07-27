@@ -1,8 +1,1 @@
-{
-  "builds": [
-    {
-      "src": "api/contacts.js",
-      "use": "@vercel/node"
-    }
-  ]
-}
+
