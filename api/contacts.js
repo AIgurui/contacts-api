@@ -1,3 +1,11 @@
+import jwt from 'jsonwebtoken';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export default async function handler(req, res) {
   try {
     // Extract both JWT and user ID
@@ -28,7 +36,7 @@ export default async function handler(req, res) {
     const { data: contacts, error } = await supabase
       .from('contacts')
       .select('*')
-      .eq('user_id', decodedJWT.user_id); // Use JWT user_id
+      .eq('user_id', decodedJWT.user_id);
       
     if (error) {
       return res.status(500).json({ error: error.message });
