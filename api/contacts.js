@@ -1,4 +1,5 @@
-import jwt from 'jsonwebtoken';
+// Import 'jose' instead of 'jsonwebtoken'
+import * as jose from 'jose';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -11,41 +12,44 @@ export default async function handler(req, res) {
     // Extract both JWT and user ID
     const authHeader = req.headers.authorization;
     const userIdFromHeader = req.headers['x-user-id'];
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Missing or invalid authorization header' });
     }
-    
+
     if (!userIdFromHeader) {
       return res.status(401).json({ error: 'Missing X-User-ID header' });
     }
 
     const token = authHeader.substring(7); // Remove "Bearer " prefix
-    
-    // Verify JWT
-    const decodedJWT = jwt.verify(token, process.env.JWT_SECRET);
-    
+
+    // Create a secret key object. 'jose' requires the secret to be encoded.
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+    // Verify the JWT using 'jose'.
+    const { payload: decodedJWT } = await jose.jwtVerify(token, secret);
+
     // DOUBLE SECURITY: Ensure JWT user matches header user
-    if (decodedJWT.user_id !== userIdFromHeader) {
-      return res.status(401).json({ 
-        error: 'User ID mismatch - security violation detected' 
-      });
+    // decodedJWT.sub contains the user ID from the token
+    if (decodedJWT.sub !== userIdFromHeader) {
+      return res.status(401).json({ error: 'User ID mismatch – security violation detected' });
     }
-    
+
     // Proceed with Supabase query using the validated user ID
     const { data: contacts, error } = await supabase
       .from('contacts')
       .select('*')
-      .eq('user_id', decodedJWT.user_id);
-      
+      .eq('user_id', decodedJWT.sub); // Use the ID from the token
+
     if (error) {
       return res.status(500).json({ error: error.message });
     }
-    
-    return res.status(200).json(contacts);
-    
+
+    res.status(200).json(contacts);
+
   } catch (error) {
     console.error('API Error:', error);
+    // The error from jose.jwtVerify will be caught here if the token is invalid
     return res.status(401).json({ error: 'Invalid token' });
   }
 }

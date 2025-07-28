@@ -1,12 +1,11 @@
 {
   "name": "contacts-api",
   "version": "1.0.0",
-  "description": "Secure API for contacts with JWT Authentication",
-  "type": "commonjs",
-  "main": "api/contacts.js",
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.3",
-    "jsonwebtoken": "^9.0.2"
+    "@supabase/supabase-js": "^2.39.0",
+    "jose": "^6.0.12"
   }
 }
-
